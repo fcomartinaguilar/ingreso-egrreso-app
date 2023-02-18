@@ -1,18 +1,29 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
-import { map } from 'rxjs';
+import { Store } from '@ngrx/store';
+import { map, Subject, takeUntil } from 'rxjs';
+import { AppState } from '../app.reducer';
+import * as authActions from '../auth/auth.actions';
 import { Usuario } from '../models/usuario.model';
 
 @Injectable({
     providedIn: 'root'
 })
-export class AuthService {
+export class AuthService implements OnDestroy{
+
+    userSubscription = new Subject();
 
     constructor(
         public auth: AngularFireAuth,
-        private firestore: AngularFirestore
+        private firestore: AngularFirestore,
+        private store: Store<AppState>
     ) { }
+
+    ngOnDestroy(): void {
+      this.userSubscription.next('');
+      this.userSubscription.complete();
+    }
 
     crearUsuario( nombre:string, email:string, password:string ) {
         return this.auth.createUserWithEmailAndPassword( email, password ) // regresa una promesa
@@ -32,8 +43,24 @@ export class AuthService {
     }
 
     initAuthListener() {
-        this.auth.onAuthStateChanged(firebaseUser => {
-            console.log(firebaseUser);
+        this.auth.onAuthStateChanged(fbUser => {
+            // console.log(fbUser?.uid);
+            if (fbUser) {
+              // Existe
+              this.firestore.doc(`${fbUser.uid}/usuario`).valueChanges().pipe(
+                takeUntil(this.userSubscription)
+              )
+                .subscribe( (firestoreUser: any) => {
+                  console.log (firestoreUser);
+                  const user = Usuario.fromFirebase( firestoreUser );
+                  this.store.dispatch(authActions.setUser({ user: user }));
+                })
+            }
+            else {
+              // No Existe
+              console.log ('Llamar unset del user');
+              this.store.dispatch(authActions.unSetUser());
+            }
         });
     }
 
