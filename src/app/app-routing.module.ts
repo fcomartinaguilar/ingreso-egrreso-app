@@ -5,6 +5,7 @@ import { RegisterComponent } from './auth/register/register.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { dashboardRoutes } from './dashboard/dashboard.routes';
 import { AuthGuard } from './services/auth.guard';
+import { IngresoEgresoModule } from './ingreso-egreso/ingreso-egreso.module';
 
 const routes: Routes = [
   {
@@ -15,10 +16,16 @@ const routes: Routes = [
   },
   {
     path: '',
-    component: DashboardComponent,
-    children: dashboardRoutes,
-    canActivate: [AuthGuard]
+    // canActivate: [AuthGuard],
+    canMatch: [AuthGuard],
+    loadChildren: () => import('./ingreso-egreso/ingreso-egreso.module').then( m => IngresoEgresoModule ),
   },
+  // {
+  //   path: '',
+  //   component: DashboardComponent,
+  //   children: dashboardRoutes,
+  //   canActivate: [AuthGuard]
+  // },
   {
     path: '**', redirectTo: ''
   },
