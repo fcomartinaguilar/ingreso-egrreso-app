@@ -5,6 +5,7 @@ import { Store } from '@ngrx/store';
 import { map, Subject, takeUntil } from 'rxjs';
 import { AppState } from '../app.reducer';
 import * as authActions from '../auth/auth.actions';
+import * as ingresoEgresoActions from '../ingreso-egreso/ingreso-egreso.actions';
 import { Usuario } from '../models/usuario.model';
 
 @Injectable({
@@ -13,6 +14,11 @@ import { Usuario } from '../models/usuario.model';
 export class AuthService implements OnDestroy{
 
     userSubscription = new Subject();
+    private _user!: Usuario | null;
+
+    get user() {
+      return ({...this._user});
+    }
 
     constructor(
         public auth: AngularFireAuth,
@@ -51,15 +57,18 @@ export class AuthService implements OnDestroy{
                 takeUntil(this.userSubscription)
               )
                 .subscribe( (firestoreUser: any) => {
-                  console.log (firestoreUser);
+                  console.log ('initAuthListener --->', firestoreUser);
                   const user = Usuario.fromFirebase( firestoreUser );
+                  this._user = user;
                   this.store.dispatch(authActions.setUser({ user: user }));
                 })
-            }
-            else {
-              // No Existe
-              console.log ('Llamar unset del user');
-              this.store.dispatch(authActions.unSetUser());
+              }
+              else {
+                // No Existe
+                console.log ('Llamar unset del user');
+                this._user = null;
+                this.store.dispatch(authActions.unSetUser());
+                this.store.dispatch(ingresoEgresoActions.unSetItems());
             }
         });
     }
